@@ -210,14 +210,29 @@ from nipype.utils.filemanip import split_filename
 from nipype.interfaces.ants.base import ANTSCommand, ANTSCommandInputSpec
 
 class FilmInputSpec(ANTSCommandInputSpec):
-    input_image = File(argstr='%s', mandatory=True, position=-2, desc='input image')
+    input_image = File(argstr='%s', mandatory=True, exists=True, position=-2, desc='input image')
     output_image = File(argstr='%s', mandatory=True, position=-1, desc='output image')
-    num_of_passes = traits.Int(2, argstr='--passes %s', usedefault=True, desc="Number of interleaved passes")
+    passes = traits.Int(2, argstr='--passes %s', usedefault=True, desc="Number of interleaved passes")
     injection_kernel_sigma = traits.Float(0.5, argstr='--injection-kernel-sigma %s', usedefault=True, desc="Standard deviation of Gaussian kernel for volume injection in multiples of pixel size in each direction.")
     injection_kernel_radius = traits.Float(2, argstr='--injection-kernel-radius %s', usedefault=True, desc="Truncation radius factor of injection kernel. The kernel is truncated at sigma*radius, where sigma is the kernel standard deviation.")
     num_iterations = traits.Int(20, argstr='--num-iterations %s', usedefault=True, desc="Maximum number of inverse interpolation iterations")
-    verbose = traits.Bool(argstr="--verbose")
-    inverse_interpolation_kernel = traits.Enum("cubic", "linear", "hamming-sinc", "cosine-sinc", argstr="--%s", default='--cubic', desc='Kernel for the inverse interpolation reconstruction. Supported values: "cubic", "linear", "hamming-sinc", "cosine-sinc", where the default is "cubic"')
+    verbose = traits.Bool(argstr="--verbose", desc='Increment verbosity level by 1 (deprecated; supported for backward compatibility).')
+    inverse_interpolation_kernel = traits.Enum("cubic", "linear", "hamming-sinc", "cosine-sinc", argstr="--%s",
+                                               default='--cubic', usedefault=True,
+                                               desc='Kernel for the inverse interpolation reconstruction. Supported values: "cubic", "linear", "hamming-sinc", "cosine-sinc", where the default is "cubic"')
+    padding_value = traits.Float(argstr="--padding-value %s", desc="Set padding value for input image. Pixels with this value will be ignored.")
+    interleaving_axis = traits.Enum("guess-from-input", "axial", "sagittal", "coronal", "interleave-x", "interleave-y", "interleave-z",
+                                    argstr="--%s", default='--guess-from-input',
+                                    desc='Define interleave axis: this is the through-slice direction of the acquisition.')
+    reference_image = File(argstr='--reference-image %s', exists=True, default=None, desc='Use a separate high-resolution reference image for registration [Default: NONE]')
+    registration_metric = traits.Enum("msd", "nmi", "mi", "cr", "cc", argstr='--%s', default="--msd", desc='Registration metric for motion estimation by image-to-image registration.')
+    import_xforms_path = File(argstr='--import-xforms-path %s', default=None, desc='Path of file from which to import transformations between passes. [Default: NONE]')
+    export_xforms_path = File(argstr='--export-xforms-path %s', default=None, desc='Path of file to which to export transformations between passes. [Default: NONE]')
+    fourth_order_error = traits.Bool(argstr='--fourth-order-error', desc="Use fourth-order (rather than second-order) error for optimization.")
+    l_norm_weight = traits.Float(0, argstr="--l-norm-weight %s", desc="Set constraint weight for Tikhonov-type L-Norm regularization (0 disables constraint) [Default: 0]")
+    no_truncation = traits.Bool(argstr='--no-truncation', desc="Turn off regional intensity truncation")
+    write_injected_image = File(argstr='--write-injected-image %s', default=None, desc='Write initial volume injection image to path [Default: NONE]')
+    write_images_as_float = traits.Bool(argstr='--write-images-as-float', desc="Write output images as floating point [default: same as input]")
 
 class FilmOutputSpec(TraitedSpec):
     image = File(exists=True, desc='output image')
@@ -228,7 +243,7 @@ class Film(ANTSCommand):
     --------
     >>>
     """
-    _cmd = '/ipldev/scratch/johnsonhj/src/cmtk-build/bin/film'
+    _cmd = '/ipldev/sharedopt/20120722/Darwin_i386/cmtk/bin/film'
     input_spec = FilmInputSpec
     output_spec = FilmOutputSpec
 
