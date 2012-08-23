@@ -211,7 +211,8 @@ from nipype.interfaces.ants.base import ANTSCommand, ANTSCommandInputSpec
 
 class FilmInputSpec(ANTSCommandInputSpec):
     input_image = File(argstr='%s', mandatory=True, exists=True, position=-2, desc='input image')
-    output_image = File(argstr='%s', mandatory=True, position=-1, desc='output image')
+    output_image = File(argstr='%s', usedefault=True, position=-1, desc='output image')
+    output_prefix = traits.Str('film3pC', usedefault=True, desc=('Prefix that is prepended to all output files (default = film3pC)'))
     passes = traits.Int(2, argstr='--passes %s', usedefault=True, desc="Number of interleaved passes")
     injection_kernel_sigma = traits.Float(0.5, argstr='--injection-kernel-sigma %s', usedefault=True, desc="Standard deviation of Gaussian kernel for volume injection in multiples of pixel size in each direction.")
     injection_kernel_radius = traits.Float(2, argstr='--injection-kernel-radius %s', usedefault=True, desc="Truncation radius factor of injection kernel. The kernel is truncated at sigma*radius, where sigma is the kernel standard deviation.")
@@ -247,10 +248,18 @@ class Film(ANTSCommand):
     input_spec = FilmInputSpec
     output_spec = FilmOutputSpec
 
+    def getOutputFilename(self):
+        image_dir_split = self.inputs.input_image.strip().split('/')
+        site = image_dir_split[3]
+        imagename = image_dir_split[-1]
+        return '%s_%s_%s' % (self.inputs.output_prefix, site, imagename)
+
     def _format_arg(self, opt, spec, val):
+        if opt == 'output_image':
+            return self.getOutputFilename()
         return super(Film, self)._format_arg(opt, spec, val)
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['image'] = os.path.abspath(self.inputs.output_image)
+        outputs['image'] = os.path.abspath(self.getOutputFilename())
         return outputs
